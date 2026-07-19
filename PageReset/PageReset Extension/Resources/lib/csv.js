@@ -73,12 +73,51 @@
     const tables = Array.from(scope.querySelectorAll("table"));
     if (!tables.length) return "";
     return tables
-      .map((table, i) => {
-        const csv = gridToCsv(tableToGrid(table));
-        if (tables.length === 1) return csv;
-        return `### Table ${i + 1}\n${csv}`;
-      })
-      .join("\n");
+      .map((table) => gridToCsv(tableToGrid(table)).replace(/\n$/, ""))
+      .filter(Boolean)
+      .join("\n\n") + (tables.length ? "\n" : "");
+  }
+
+  function tablesToCsvFromList(tables) {
+    if (!tables.length) return "";
+    return tables
+      .map((table) => gridToCsv(tableToGrid(table)).replace(/\n$/, ""))
+      .filter(Boolean)
+      .join("\n\n") + (tables.length ? "\n" : "");
+  }
+
+  /** Tables intersecting the selection (no whole-page fallback). */
+  function tablesInSelection(sel) {
+    if (!sel || sel.isCollapsed || !sel.rangeCount) return null;
+    const range = sel.getRangeAt(0);
+    const found = [];
+    const seen = new Set();
+
+    const add = (table) => {
+      if (!table || seen.has(table)) return;
+      seen.add(table);
+      found.push(table);
+    };
+
+    let start = range.startContainer;
+    if (start.nodeType === 3) start = start.parentElement;
+    if (start && start.nodeType === 1 && start.closest) {
+      add(start.closest("table"));
+    }
+
+    for (const table of document.querySelectorAll("table")) {
+      try {
+        if (typeof sel.containsNode === "function") {
+          if (sel.containsNode(table, true)) add(table);
+        } else if (range.intersectsNode(table)) {
+          add(table);
+        }
+      } catch {
+        /* ignore */
+      }
+    }
+
+    return found;
   }
 
   function selectionTablesToCsv() {
@@ -86,11 +125,7 @@
     if (!sel || sel.isCollapsed || !sel.rangeCount) {
       return tablesToCsv(document);
     }
-    const range = sel.getRangeAt(0);
-    const container = document.createElement("div");
-    container.appendChild(range.cloneContents());
-    const csv = tablesToCsv(container);
-    return csv || tablesToCsv(document);
+    return tablesToCsvFromList(tablesInSelection(sel) || []);
   }
 
   global.PageResetCSV = {

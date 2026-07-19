@@ -4,7 +4,13 @@
   <meta charset="UTF-8" />
   <title>PageReset Hostile Page Test</title>
   <style>
-    body { font-family: Georgia, serif; margin: 0; padding: 40px; }
+    body {
+      font-family: Georgia, "Times New Roman", serif;
+      margin: 0;
+      padding: 40px;
+      background: #f2f2f7;
+      color: #1c1c1e;
+    }
     .article {
       max-width: 640px;
       margin: 0 auto;
@@ -14,28 +20,39 @@
     .banner {
       position: fixed;
       inset: 0;
-      background: rgba(0,0,0,.55);
+      background: rgba(18, 20, 26, 0.55);
       display: flex;
       align-items: center;
       justify-content: center;
       z-index: 99999;
     }
     .modal {
-      background: white;
+      background: #fff;
       padding: 32px;
       border-radius: 12px;
       width: min(400px, 90vw);
       text-align: center;
+      box-shadow: 0 16px 40px rgba(18, 20, 26, 0.2);
+    }
+    .modal button {
+      margin-top: 8px;
+      border: none;
+      border-radius: 8px;
+      padding: 10px 14px;
+      background: #007aff;
+      color: #fff;
+      font: inherit;
     }
     table { border-collapse: collapse; width: 100%; margin-top: 24px; }
-    td, th { border: 1px solid #ccc; padding: 8px; }
+    td, th { border: 1px solid #d8dce3; padding: 8px; }
+    a { color: #007aff; }
   </style>
 </head>
 <body oncontextmenu="return false;" onselectstart="return false;" oncopy="return false;">
   <div class="banner" id="overlay">
     <div class="modal">
-      <h2>Subscribe to continue</h2>
-      <p>This is a newsletter overlay for testing PageReset overlay removal. Not a paywall.</p>
+      <h2>Join our newsletter</h2>
+      <p>This is a cookie/newsletter-style overlay for testing PageReset overlay removal.</p>
       <button type="button">No thanks</button>
     </div>
   </div>

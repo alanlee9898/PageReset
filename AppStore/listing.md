@@ -33,10 +33,10 @@ PageReset does **not** bypass paywalls, login walls, DRM, or paid content. It fo
 3. Grant access for the sites you want to clean up.  
 4. Use the toolbar button for actions and per-site toggles.
 
-### Shortcuts (customizable in Safari Settings → Extensions → PageReset)
-• ⌘⇧C — Copy without formatting  
-• ⌘⇧M — Copy as Markdown  
-• ⌘⇧X — Remove overlays  
+### Shortcuts (suggested; set or change in Safari Settings → Extensions → PageReset)
+• ⌘⇧C — Copy without formatting (if available)  
+• ⌘⇧M — Copy as Markdown (if available)  
+• ⌘⇧X — Remove overlays (if available)  
 
 ## Keywords
 safari,extension,copy,markdown,overlay,selection,clipboard,csv,links,utility,cleanup,reader
@@ -49,7 +49,7 @@ Launch: US$4.99 (one-time)
 Standard: US$7.99 (one-time)
 
 ## Support URL
-https://alanlee.github.io/pagereset/privacy.html
+https://alanlee.github.io/pagereset/support.html
 
 ## Privacy Policy URL
 https://alanlee.github.io/pagereset/privacy.html

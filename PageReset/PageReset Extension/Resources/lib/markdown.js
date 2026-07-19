@@ -40,7 +40,7 @@
       const href = node.getAttribute("href") || "";
       const label = textOf(node).trim() || href;
       try {
-        const abs = new URL(href, document.baseURI).href;
+        const abs = new URL(href, document.baseURI || location.href).href;
         return `[${escapeMd(label)}](${abs})`;
       } catch {
         return escapeMd(label);
@@ -53,13 +53,16 @@
       return `*${textOf(node).trim()}*`;
     }
     if (tag === "CODE" && node.parentElement?.tagName !== "PRE") {
-      return "`" + textOf(node).replace(/`/g, "\\`") + "`";
+      const code = textOf(node);
+      // Prefer a longer fence when the code contains backticks
+      const ticks = "`".repeat(Math.max(1, (code.match(/`+/g) || []).reduce((n, s) => Math.max(n, s.length), 0) + 1));
+      return ticks + code + ticks;
     }
     if (tag === "IMG") {
       const alt = node.getAttribute("alt") || "";
       const src = node.getAttribute("src") || "";
       try {
-        const abs = new URL(src, document.baseURI).href;
+        const abs = new URL(src, document.baseURI || location.href).href;
         return `![${escapeMd(alt)}](${abs})`;
       } catch {
         return alt ? escapeMd(alt) : "";
@@ -123,6 +126,7 @@
       const cells = (tr) =>
         Array.from(tr.querySelectorAll("th,td")).map((c) => textOf(c).trim().replace(/\|/g, "\\|"));
       const header = cells(rows[0]);
+      if (!header.length) return "";
       let md = "\n| " + header.join(" | ") + " |\n";
       md += "| " + header.map(() => "---").join(" | ") + " |\n";
       for (let i = 1; i < rows.length; i++) {

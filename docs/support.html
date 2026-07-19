@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>PageReset Support</title>
+  <style>
+    :root {
+      color-scheme: light dark;
+      --bg: #f2f2f7;
+      --fg: #1c1c1e;
+      --muted: #6c6c70;
+      --accent: #007aff;
+      --border: rgba(60, 60, 67, 0.18);
+      --surface: #ffffff;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #1c1c1e;
+        --fg: #f5f5f7;
+        --muted: #98989d;
+        --accent: #0a84ff;
+        --border: rgba(84, 84, 88, 0.65);
+        --surface: #2c2c2e;
+      }
+    }
+    body {
+      font: 15px/1.55 -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", sans-serif;
+      max-width: 640px;
+      margin: 48px auto;
+      padding: 0 20px 64px;
+      background: var(--bg);
+      color: var(--fg);
+    }
+    h1 {
+      margin: 0 0 8px;
+      font-size: 26px;
+      font-weight: 650;
+      letter-spacing: -0.02em;
+    }
+    h2 {
+      margin: 28px 0 8px;
+      font-size: 15px;
+      font-weight: 600;
+    }
+    .muted { color: var(--muted); font-size: 0.9em; }
+    a { color: var(--accent); }
+    a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+    ol, ul { padding-left: 1.25rem; }
+    li { margin: 0.35em 0; }
+    hr {
+      border: none;
+      border-top: 1px solid var(--border);
+      margin: 28px 0;
+    }
+  </style>
+</head>
+<body>
+  <h1>PageReset Support</h1>
+  <p class="muted">Make any webpage usable again.</p>
+
+  <h2>Enable the extension</h2>
+  <ol>
+    <li>Open the PageReset app once after install.</li>
+    <li>Click <strong>Open Safari Settings…</strong> and turn on the PageReset extension.</li>
+    <li>In Safari, grant PageReset access for the sites you want to clean up.</li>
+    <li>Use the PageReset button in the Safari toolbar.</li>
+  </ol>
+
+  <h2>Common questions</h2>
+  <p><strong>Nothing happens on a page.</strong> Reload the tab after enabling the extension, and confirm Safari has granted access for that site.</p>
+  <p><strong>Copy shortcuts don’t work.</strong> Suggested shortcuts can conflict with other apps. Change them in Safari Settings → Extensions → PageReset.</p>
+  <p><strong>Overlays aren’t removed.</strong> Use <em>Remove overlays</em> from the toolbar, or Zap element for a specific block. PageReset does not remove paywalls, login walls, or paid content.</p>
+  <p><strong>Selection / right-click still blocked.</strong> Those options are off by default. Turn them on for This site or Global in the toolbar popup.</p>
+
+  <h2>Privacy</h2>
+  <p>PageReset runs locally on your Mac. See the <a href="privacy.html">Privacy Policy</a>.</p>
+
+  <hr />
+  <p>Email: <a href="mailto:pagereset@alanlee.dev">pagereset@alanlee.dev</a></p>
+</body>
+</html>

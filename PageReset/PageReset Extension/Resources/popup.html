@@ -8,53 +8,84 @@
 </head>
 <body>
   <header class="header">
-    <div class="brand">
-      <strong>PageReset</strong>
-      <span class="tagline">Make any webpage usable again</span>
+    <div class="title-row">
+      <h1>PageReset</h1>
+      <div class="host-row">
+        <span id="host" class="host" title="">—</span>
+        <span id="overrideBadge" class="badge" hidden>Site override</span>
+      </div>
     </div>
-    <p id="host" class="host">—</p>
   </header>
 
-  <section class="actions">
-    <button type="button" data-action="remove-overlays">Remove overlays</button>
-    <button type="button" data-action="copy-plain">Copy plain text</button>
-    <button type="button" data-action="copy-markdown">Copy as Markdown</button>
-    <button type="button" data-action="extract-csv">Tables → CSV</button>
-    <button type="button" data-action="copy-links">Copy all links</button>
-    <button type="button" data-action="toggle-zap" class="secondary">Zap element…</button>
+  <section class="panel" aria-label="Cleanup actions">
+    <button type="button" class="row-btn primary" data-action="remove-overlays">
+      <span>Remove overlays</span>
+    </button>
+    <button type="button" class="row-btn" data-action="copy-markdown">
+      <span>Copy as Markdown</span>
+      <kbd title="If set in Safari Settings">⌘⇧M</kbd>
+    </button>
+    <button type="button" class="row-btn" data-action="copy-plain">
+      <span>Copy without formatting</span>
+      <kbd title="If set in Safari Settings">⌘⇧C</kbd>
+    </button>
+    <button type="button" class="row-btn" data-action="extract-csv">
+      <span>Extract tables as CSV</span>
+    </button>
+    <button type="button" class="row-btn" data-action="copy-links">
+      <span>Copy links</span>
+    </button>
+    <button type="button" class="row-btn subtle" data-action="toggle-zap">
+      <span>Zap element…</span>
+      <kbd>Esc</kbd>
+    </button>
+    <button type="button" class="row-btn subtle" data-action="undo-hide">
+      <span>Undo last hide</span>
+    </button>
   </section>
 
-  <section class="rules">
-    <h2>This site</h2>
-    <label class="row">
+  <section class="panel rules" aria-labelledby="rules-heading">
+    <div class="panel-head">
+      <h2 id="rules-heading">Settings</h2>
+      <div class="segment" role="radiogroup" aria-label="Rule scope">
+        <label class="seg">
+          <input type="radio" name="scope" value="site" checked />
+          <span>This site</span>
+        </label>
+        <label class="seg">
+          <input type="radio" name="scope" value="global" />
+          <span>Global</span>
+        </label>
+      </div>
+    </div>
+
+    <label class="toggle-row">
       <span>Restore text selection</span>
       <input type="checkbox" id="restoreSelection" data-rule="restoreSelection" />
     </label>
-    <label class="row">
+    <label class="toggle-row">
       <span>Restore right-click</span>
       <input type="checkbox" id="restoreRightClick" data-rule="restoreRightClick" />
     </label>
-    <label class="row">
+    <label class="toggle-row">
       <span>Remove overlays on load</span>
       <input type="checkbox" id="removeOverlaysOnLoad" data-rule="removeOverlaysOnLoad" />
     </label>
-    <label class="row">
+    <label class="toggle-row">
       <span>Always copy as plain text</span>
       <input type="checkbox" id="copyPlainOnCopy" data-rule="copyPlainOnCopy" />
     </label>
-    <div class="rule-scope">
-      <label><input type="radio" name="scope" value="site" checked /> This site only</label>
-      <label><input type="radio" name="scope" value="global" /> Global default</label>
-    </div>
-    <button type="button" id="clearSite" class="linkish">Clear site overrides</button>
+
+    <p class="hint" id="scopeHint">This site: toggles apply to the current hostname. Global: defaults for all sites.</p>
+    <button type="button" id="clearSite" class="text-btn">Clear overrides for this site</button>
   </section>
 
-  <section class="sites" id="sitesSection">
-    <h2>Saved site rules</h2>
+  <details class="sites" id="sitesSection">
+    <summary>Saved site rules</summary>
     <ul id="siteList"></ul>
-  </section>
+  </details>
 
-  <p id="status" class="status" role="status"></p>
+  <p id="status" class="status" role="status" aria-live="polite"></p>
 
   <script src="lib/rules.js"></script>
   <script src="popup.js"></script>

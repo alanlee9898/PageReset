@@ -1,29 +1,55 @@
 /**
  * PageReset content script — restore usability on hostile pages.
  * Does NOT bypass authentication, paid content, DRM, or paywalls.
+ *
+ * Clipboard writes for toolbar actions happen in the popup (user gesture).
+ * Menu/command copies finish in the background via executeScript.
  */
 (function () {
+  if (globalThis.__pageResetContentLoaded) return;
+  globalThis.__pageResetContentLoaded = true;
+
   const STYLE_ID = "pagereset-selection-style";
   const OVERLAY_ATTR = "data-pagereset-hidden-overlay";
   const ZAP_CLASS = "pagereset-zap-mode";
   const ZAP_HOVER = "pagereset-zap-hover";
+  const INLINE_SCAN_CAP = 4000;
 
   let rules = null;
   let zapActive = false;
+  let zapHoverEl = null;
   let observer = null;
+  let observerTimer = null;
+  let selectionHooksInstalled = false;
+  let rightClickHookInstalled = false;
+  let copyHooksInstalled = false;
+  let propertiesNeutralized = false;
+  let storageApplyTimer = null;
 
   function hostname() {
     try {
-      return location.hostname || "unknown";
+      return location.hostname || "";
     } catch {
-      return "unknown";
+      return "";
     }
   }
 
   async function loadRules() {
-    if (!globalThis.PageResetRules) return PageResetRules?.DEFAULT_GLOBAL || {};
+    if (!globalThis.PageResetRules) {
+      rules = {};
+      return rules;
+    }
     rules = await PageResetRules.getRulesForHost(hostname());
     return rules;
+  }
+
+  function libsReady() {
+    return !!(
+      globalThis.PageResetRules &&
+      globalThis.PageResetMarkdown &&
+      globalThis.PageResetCSV &&
+      globalThis.PageResetLinks
+    );
   }
 
   function ensureSelectionStyle() {
@@ -37,106 +63,124 @@
       }
       .${ZAP_CLASS}, .${ZAP_CLASS} * { cursor: crosshair !important; }
       .${ZAP_HOVER} {
-        outline: 2px solid #e85d04 !important;
+        outline: 2px solid #007aff !important;
         outline-offset: 2px !important;
       }
     `;
     (document.documentElement || document.head || document.body).appendChild(style);
   }
 
-  function restoreSelection() {
-    ensureSelectionStyle();
-    document.documentElement.classList.add("pagereset-select");
+  function clearInlineUserSelect(root) {
+    if (!root?.querySelectorAll) return;
+    const nodes = root.querySelectorAll("*");
+    const limit = Math.min(nodes.length, INLINE_SCAN_CAP);
+    for (let i = 0; i < limit; i++) {
+      const el = nodes[i];
+      if (!el.style) continue;
+      if (el.style.userSelect === "none" || el.style.webkitUserSelect === "none") {
+        el.style.userSelect = "text";
+        el.style.webkitUserSelect = "text";
+      }
+    }
+  }
 
-    // Clear inline user-select:none on elements we encounter
-    const clearInline = (root) => {
-      const els = root.querySelectorAll
-        ? root.querySelectorAll("*")
-        : [];
-      for (const el of els) {
-        if (el.style && (el.style.userSelect === "none" || el.style.webkitUserSelect === "none")) {
-          el.style.userSelect = "text";
-          el.style.webkitUserSelect = "text";
-        }
+  function neutralizeSelectProps() {
+    if (propertiesNeutralized) return;
+    propertiesNeutralized = true;
+    const neutralize = (obj, prop) => {
+      try {
+        Object.defineProperty(obj, prop, {
+          configurable: true,
+          get() {
+            return null;
+          },
+          set() {}
+        });
+      } catch {
+        /* ignore */
       }
     };
-    if (document.body) clearInline(document.body);
+    neutralize(document, "onselectstart");
+    neutralize(document, "oncontextmenu");
+    neutralize(document, "oncopy");
+    if (document.body) {
+      neutralize(document.body, "onselectstart");
+      neutralize(document.body, "oncontextmenu");
+      neutralize(document.body, "oncopy");
+    }
+  }
 
-    // Capturing listeners so site handlers are less likely to cancel selection.
-    ["selectstart", "mousedown", "dragstart"].forEach((type) => {
-      document.addEventListener(
-        type,
-        (e) => {
-          if (!rules?.restoreSelection) return;
-          e.stopPropagation();
-        },
-        true
-      );
-    });
+  function installSelectionHooks() {
+    if (selectionHooksInstalled) return;
+    selectionHooksInstalled = true;
+    document.addEventListener(
+      "selectstart",
+      (e) => {
+        if (!rules?.restoreSelection) return;
+        e.stopPropagation();
+      },
+      true
+    );
+  }
 
-    // Soften document-level property assignments sites use to block selection
-    try {
-      const neutralize = (obj, prop) => {
+  function installRightClickHook() {
+    if (rightClickHookInstalled) return;
+    rightClickHookInstalled = true;
+    document.addEventListener(
+      "contextmenu",
+      (e) => {
+        if (!rules?.restoreRightClick) return;
+        e.stopPropagation();
+      },
+      true
+    );
+  }
+
+  function installCopyHooks() {
+    if (copyHooksInstalled) return;
+    copyHooksInstalled = true;
+    document.addEventListener(
+      "copy",
+      (e) => {
+        if (!rules?.restoreSelection && !rules?.copyPlainOnCopy) return;
+        const text = window.getSelection()?.toString() || "";
+        if (!text) return;
         try {
-          Object.defineProperty(obj, prop, {
-            configurable: true,
-            get() {
-              return null;
-            },
-            set() {
-              /* ignore site assignments */
-            }
-          });
+          e.stopPropagation();
+          if (rules.copyPlainOnCopy) {
+            e.preventDefault();
+            e.clipboardData?.setData("text/plain", text);
+          } else if (rules.restoreSelection) {
+            e.clipboardData?.setData("text/plain", text);
+          }
         } catch {
           /* ignore */
         }
-      };
-      if (rules?.restoreSelection) {
-        neutralize(document, "onselectstart");
-        neutralize(document.body || document.documentElement, "onselectstart");
-      }
-    } catch {
-      /* ignore */
+      },
+      true
+    );
+  }
+
+  function applySelectionVisual() {
+    if (!rules?.restoreSelection) {
+      document.documentElement?.classList.remove("pagereset-select");
+      return;
     }
+    ensureSelectionStyle();
+    document.documentElement.classList.add("pagereset-select");
+    if (document.body) clearInlineUserSelect(document.body);
+    neutralizeSelectProps();
   }
 
-  function restoreRightClick() {
-    const handler = (e) => {
-      if (!rules?.restoreRightClick) return;
-      e.stopPropagation();
-      // Do not preventDefault — we want the menu
-    };
-    document.addEventListener("contextmenu", handler, true);
-
-    try {
-      Object.defineProperty(document, "oncontextmenu", {
-        configurable: true,
-        get() {
-          return null;
-        },
-        set() {}
-      });
-    } catch {
-      /* ignore */
-    }
+  function applyRightClickVisual() {
+    if (rules?.restoreRightClick) neutralizeSelectProps();
   }
 
-  function unlockScroll() {
-    const html = document.documentElement;
-    const body = document.body;
-    [html, body].forEach((el) => {
-      if (!el) return;
-      el.style.overflow = "auto";
-      el.style.position = "";
-      el.style.height = "";
-      el.classList.remove("modal-open", "no-scroll", "overflow-hidden");
-    });
-  }
-
-  function looksLikeOverlay(el) {
+  function looksLikeConsentOverlay(el) {
     if (!el || el.nodeType !== 1) return false;
     if (el.id === STYLE_ID) return false;
     if (el === document.body || el === document.documentElement) return false;
+    if (el.getAttribute(OVERLAY_ATTR) === "1") return false;
 
     const style = getComputedStyle(el);
     const position = style.position;
@@ -148,102 +192,152 @@
     const rect = el.getBoundingClientRect();
     const vw = window.innerWidth || document.documentElement.clientWidth;
     const vh = window.innerHeight || document.documentElement.clientHeight;
-    if (rect.width < vw * 0.4 && rect.height < vh * 0.3) return false;
+    if (rect.width < vw * 0.35 && rect.height < vh * 0.25) return false;
 
-    // Skip obvious UI chrome that isn't an overlay (nav bars that are sticky but short)
-    if (rect.height < 80 && rect.top < 10 && rect.width > vw * 0.8) return false;
+    // Sticky nav / toolbars
+    if (rect.height < 88 && rect.top < 12 && rect.width > vw * 0.8) return false;
 
-    const text = (el.innerText || "").toLowerCase();
-    const classId = `${el.className || ""} ${el.id || ""}`.toLowerCase();
+    const text = (el.innerText || el.textContent || "").toLowerCase().slice(0, 800);
+    const classAttr =
+      (typeof el.className === "string" && el.className) ||
+      el.getAttribute?.("class") ||
+      (el.classList ? [...el.classList].join(" ") : "");
+    const classId = `${classAttr} ${el.id || ""}`.toLowerCase();
+
+    // Real paywall / auth gates — do not hide these.
+    // Ignore negated phrasing like "not a paywall" (used in tests / disclaimers).
+    const probe = text.replace(/\bnot a paywall\b/g, " ").replace(/\bno paywall\b/g, " ");
+    const blocked =
+      /\bpaywall\b|subscribe to (read|continue reading)|sign[\s-]?in to (continue|read|view)|log[\s-]?in to (continue|read|view)|create (an )?account to (continue|read)|payment required|members?[- ]only|\bmetered\b|remaining free (article|articles|stor(y|ies))|unlock (this|full) (article|story)/;
+    if (blocked.test(probe) || blocked.test(classId)) return false;
+
     const keywords =
-      /cookie|consent|gdpr|newsletter|subscribe|modal|overlay|popup|interstitial|paywall|promo|banner|backdrop|dialog/;
-    const keywordHit = keywords.test(text.slice(0, 500)) || keywords.test(classId);
+      /cookie|consent|gdpr|ccpa|newsletter|sign up for|subscribe to our|join our (newsletter|mailing)|promo|announcement|backdrop|onetrust|cookiebot|consent-banner|cookie-banner|email[- ]signup|mailing list/;
+    const keywordHit = keywords.test(text) || keywords.test(classId);
+    if (!keywordHit) return false;
 
-    // Large high-z fixed layer OR keyword match
-    const large = rect.width >= vw * 0.5 && rect.height >= vh * 0.4;
-    return keywordHit || large;
+    return rect.width >= vw * 0.4 || rect.height >= vh * 0.3;
   }
 
-  function hideOverlay(el) {
+  function hideElement(el) {
     if (!el || el.getAttribute(OVERLAY_ATTR) === "1") return;
     el.setAttribute(OVERLAY_ATTR, "1");
-    el.dataset.pageresetPrevDisplay = el.style.display || "";
-    el.dataset.pageresetPrevVisibility = el.style.visibility || "";
+    el.dataset.pageresetPrevDisplay = el.style.getPropertyValue("display") || "";
+    el.dataset.pageresetPrevVisibility = el.style.getPropertyValue("visibility") || "";
+    el.dataset.pageresetPrevPointer = el.style.getPropertyValue("pointer-events") || "";
     el.style.setProperty("display", "none", "important");
     el.style.setProperty("visibility", "hidden", "important");
     el.style.setProperty("pointer-events", "none", "important");
   }
 
-  function removeOverlays() {
-    unlockScroll();
-    let count = 0;
+  function unhideElement(el) {
+    if (!el || el.getAttribute(OVERLAY_ATTR) !== "1") return false;
+    el.style.removeProperty("display");
+    el.style.removeProperty("visibility");
+    el.style.removeProperty("pointer-events");
+    const prevDisplay = el.dataset.pageresetPrevDisplay || "";
+    const prevVisibility = el.dataset.pageresetPrevVisibility || "";
+    const prevPointer = el.dataset.pageresetPrevPointer || "";
+    if (prevDisplay) el.style.display = prevDisplay;
+    if (prevVisibility) el.style.visibility = prevVisibility;
+    if (prevPointer) el.style.pointerEvents = prevPointer;
+    delete el.dataset.pageresetPrevDisplay;
+    delete el.dataset.pageresetPrevVisibility;
+    delete el.dataset.pageresetPrevPointer;
+    el.removeAttribute(OVERLAY_ATTR);
+    return true;
+  }
+
+  function unlockScroll() {
+    const html = document.documentElement;
+    const body = document.body;
+    [html, body].forEach((el) => {
+      if (!el) return;
+      if (el.style.overflow === "hidden" || getComputedStyle(el).overflow === "hidden") {
+        el.style.overflow = "auto";
+      }
+      if (el.style.position === "fixed") el.style.position = "";
+      el.classList.remove("modal-open", "no-scroll", "overflow-hidden");
+    });
+  }
+
+  function removeOverlays({ forceUnlock = false } = {}) {
+    const matched = new Set();
     const candidates = document.body
       ? document.body.querySelectorAll("div,aside,section,dialog,form")
       : [];
     for (const el of candidates) {
-      if (looksLikeOverlay(el)) {
-        hideOverlay(el);
-        count++;
-      }
+      if (looksLikeConsentOverlay(el)) matched.add(el);
     }
-    // Also unlock aria-modal dialogs that trap focus visually
     document.querySelectorAll('[aria-modal="true"], [role="dialog"]').forEach((el) => {
-      const style = getComputedStyle(el);
-      if (style.position === "fixed" || style.position === "absolute") {
-        hideOverlay(el);
-        count++;
-      }
+      if (looksLikeConsentOverlay(el)) matched.add(el);
     });
-    return count;
+    for (const el of matched) hideElement(el);
+    if (matched.size > 0 || forceUnlock) unlockScroll();
+    return matched.size;
   }
 
-  function copyPlainText(text) {
-    const value = text ?? (window.getSelection()?.toString() || "");
-    if (!value) return false;
-    // Prefer async clipboard if available
-    if (navigator.clipboard?.writeText) {
-      navigator.clipboard.writeText(value).catch(() => fallbackCopy(value));
-      return true;
+  function restoreLastHidden() {
+    const hidden = document.querySelectorAll(`[${OVERLAY_ATTR}="1"]`);
+    const last = hidden[hidden.length - 1];
+    return last ? unhideElement(last) : false;
+  }
+
+  function clearZapHover() {
+    if (zapHoverEl) {
+      zapHoverEl.classList.remove(ZAP_HOVER);
+      zapHoverEl = null;
     }
-    return fallbackCopy(value);
   }
 
-  function fallbackCopy(text) {
-    const ta = document.createElement("textarea");
-    ta.value = text;
-    ta.style.position = "fixed";
-    ta.style.left = "-9999px";
-    document.body.appendChild(ta);
-    ta.select();
-    let ok = false;
-    try {
-      ok = document.execCommand("copy");
-    } catch {
-      ok = false;
+  function onZapOver(e) {
+    if (!zapActive) return;
+    const el = e.target;
+    if (!(el instanceof Element) || el === zapHoverEl) return;
+    clearZapHover();
+    zapHoverEl = el;
+    el.classList.add(ZAP_HOVER);
+  }
+
+  function onZapOut(e) {
+    if (!zapActive) return;
+    const el = e.target;
+    const related = e.relatedTarget;
+    if (
+      el instanceof Element &&
+      el === zapHoverEl &&
+      !(related instanceof Node && el.contains(related))
+    ) {
+      clearZapHover();
     }
-    ta.remove();
-    return ok;
   }
 
-  function installPlainCopyHook() {
-    document.addEventListener(
-      "copy",
-      (e) => {
-        if (!rules?.copyPlainOnCopy) return;
-        const text = window.getSelection()?.toString() || "";
-        if (!text) return;
-        e.clipboardData?.setData("text/plain", text);
-        // Strip rich formats by preventing default after setting plain
-        e.preventDefault();
-      },
-      true
-    );
+  function onZapClick(e) {
+    if (!zapActive) return;
+    e.preventDefault();
+    e.stopPropagation();
+    e.stopImmediatePropagation();
+    const el = e.target;
+    if (el instanceof Element && el !== document.body && el !== document.documentElement) {
+      hideElement(el);
+    }
+    toggleZapMode(false);
+  }
+
+  function onZapKey(e) {
+    if (e.key === "Escape") {
+      e.preventDefault();
+      toggleZapMode(false);
+    }
   }
 
   function toggleZapMode(force) {
-    zapActive = typeof force === "boolean" ? force : !zapActive;
+    const next = typeof force === "boolean" ? force : !zapActive;
+    if (next === zapActive) return zapActive;
+    zapActive = next;
     document.documentElement.classList.toggle(ZAP_CLASS, zapActive);
     if (zapActive) {
+      ensureSelectionStyle();
       document.addEventListener("mouseover", onZapOver, true);
       document.addEventListener("mouseout", onZapOut, true);
       document.addEventListener("click", onZapClick, true);
@@ -253,94 +347,99 @@
       document.removeEventListener("mouseout", onZapOut, true);
       document.removeEventListener("click", onZapClick, true);
       document.removeEventListener("keydown", onZapKey, true);
+      clearZapHover();
       document.querySelectorAll(`.${ZAP_HOVER}`).forEach((el) => el.classList.remove(ZAP_HOVER));
     }
     return zapActive;
   }
 
-  function onZapOver(e) {
-    if (!zapActive) return;
-    const el = e.target;
-    if (!(el instanceof Element)) return;
-    el.classList.add(ZAP_HOVER);
-  }
-
-  function onZapOut(e) {
-    if (!zapActive) return;
-    const el = e.target;
-    if (!(el instanceof Element)) return;
-    el.classList.remove(ZAP_HOVER);
-  }
-
-  function onZapClick(e) {
-    if (!zapActive) return;
-    e.preventDefault();
-    e.stopPropagation();
-    const el = e.target;
-    if (el instanceof Element && el !== document.body && el !== document.documentElement) {
-      hideOverlay(el);
+  function stopOverlayObserver() {
+    if (observerTimer) {
+      clearTimeout(observerTimer);
+      observerTimer = null;
     }
-    toggleZapMode(false);
+    if (observer) {
+      observer.disconnect();
+      observer = null;
+    }
   }
 
-  function onZapKey(e) {
-    if (e.key === "Escape") toggleZapMode(false);
+  function startOverlayObserver() {
+    if (!document.body) return;
+    stopOverlayObserver();
+    let scheduled = false;
+    observer = new MutationObserver(() => {
+      if (!rules?.removeOverlaysOnLoad) return;
+      if (scheduled) return;
+      scheduled = true;
+      requestAnimationFrame(() => {
+        scheduled = false;
+        removeOverlays({ forceUnlock: false });
+      });
+    });
+    observer.observe(document.documentElement, { childList: true, subtree: true });
+    observerTimer = setTimeout(() => {
+      stopOverlayObserver();
+    }, 8000);
   }
 
   function applyRules() {
     if (!rules) return;
-    if (rules.restoreSelection) restoreSelection();
-    if (rules.restoreRightClick) restoreRightClick();
+    installSelectionHooks();
+    installRightClickHook();
+    installCopyHooks();
+    applySelectionVisual();
+    applyRightClickVisual();
     if (rules.removeOverlaysOnLoad) {
-      removeOverlays();
-      // Watch for late-injected overlays briefly
-      if (!observer && document.body) {
-        observer = new MutationObserver(() => {
-          if (rules?.removeOverlaysOnLoad) removeOverlays();
-        });
-        observer.observe(document.documentElement, { childList: true, subtree: true });
-        setTimeout(() => {
-          observer?.disconnect();
-          observer = null;
-        }, 8000);
-      }
+      removeOverlays({ forceUnlock: false });
+      startOverlayObserver();
+    } else {
+      stopOverlayObserver();
     }
   }
 
   async function handleAction(action) {
+    if (!libsReady() && action !== "get-status") {
+      return {
+        ok: false,
+        error: "PageReset isn’t fully loaded on this tab. Reload the page, then try again."
+      };
+    }
+
     await loadRules();
+
     switch (action) {
       case "copy-plain": {
-        const text = window.getSelection()?.toString() || document.body?.innerText || "";
-        return { ok: copyPlainText(text), length: text.length };
+        const text = window.getSelection()?.toString() || "";
+        if (!text) return { ok: false, error: "Nothing selected — select text first." };
+        return { ok: true, text, length: text.length, needsCopy: true };
       }
       case "copy-markdown": {
         const md =
           PageResetMarkdown.selectionToMarkdown() || PageResetMarkdown.pageToMarkdown();
-        return { ok: copyPlainText(md), length: md.length, preview: md.slice(0, 200) };
+        if (!md?.trim()) return { ok: false, error: "Nothing to copy" };
+        return { ok: true, text: md, length: md.length, needsCopy: true };
       }
       case "remove-overlays": {
-        const count = removeOverlays();
+        const count = removeOverlays({ forceUnlock: true });
         return { ok: true, count };
       }
       case "copy-links": {
         const links = PageResetLinks.selectionLinks();
         const text = PageResetLinks.formatLinks(links, "plain");
-        return { ok: copyPlainText(text), count: links.length };
-      }
-      case "copy-links-markdown": {
-        const links = PageResetLinks.selectionLinks();
-        const text = PageResetLinks.formatLinks(links, "markdown");
-        return { ok: copyPlainText(text), count: links.length };
+        if (!text) return { ok: false, error: "No links found" };
+        return { ok: true, text, count: links.length, needsCopy: true };
       }
       case "extract-csv": {
         const csv = PageResetCSV.selectionTablesToCsv();
         if (!csv) return { ok: false, error: "No tables found" };
-        return { ok: copyPlainText(csv), length: csv.length };
+        return { ok: true, text: csv, length: csv.length, needsCopy: true };
       }
       case "toggle-zap": {
-        const active = toggleZapMode();
-        return { ok: true, active };
+        return { ok: true, active: toggleZapMode() };
+      }
+      case "undo-hide": {
+        return { ok: true, restored: restoreLastHidden() };
       }
       case "get-status": {
         return {
@@ -348,6 +447,7 @@
           hostname: hostname(),
           rules,
           zapActive,
+          libsReady: libsReady(),
           url: location.href
         };
       }
@@ -360,31 +460,38 @@
     }
   }
 
-  // Message bridge
   const api = globalThis.browser || globalThis.chrome;
   api.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     if (!message || message.type !== "pagereset-action") return false;
     handleAction(message.action)
       .then((result) => sendResponse(result))
       .catch((err) => sendResponse({ ok: false, error: String(err) }));
-    return true; // async
+    return true;
   });
 
-  // Boot
   (async function boot() {
-    await loadRules();
-    installPlainCopyHook();
+    try {
+      await loadRules();
+    } catch (err) {
+      console.error("PageReset: failed to load rules", err);
+      rules = {};
+    }
+
+    installSelectionHooks();
+    installRightClickHook();
+    installCopyHooks();
 
     const start = () => {
-      applyRules();
+      try {
+        applyRules();
+      } catch (err) {
+        console.error("PageReset: failed to apply rules", err);
+      }
     };
 
-    if (document.documentElement) {
-      // Early for selection CSS
-      if (rules?.restoreSelection) {
-        ensureSelectionStyle();
-        document.documentElement.classList.add("pagereset-select");
-      }
+    if (document.documentElement && rules?.restoreSelection) {
+      ensureSelectionStyle();
+      document.documentElement.classList.add("pagereset-select");
     }
 
     if (document.readyState === "loading") {
@@ -393,13 +500,19 @@
       start();
     }
 
-    // Reload rules when storage changes
-    api.storage.onChanged.addListener(async (changes, area) => {
+    api.storage.onChanged.addListener((changes, area) => {
       if (area !== "local") return;
-      if (changes.globalRules || changes.siteRules) {
-        await loadRules();
-        applyRules();
-      }
+      if (!changes.globalRules && !changes.siteRules) return;
+      if (storageApplyTimer) clearTimeout(storageApplyTimer);
+      storageApplyTimer = setTimeout(async () => {
+        storageApplyTimer = null;
+        try {
+          await loadRules();
+          applyRules();
+        } catch (err) {
+          console.error("PageReset: failed to apply rule changes", err);
+        }
+      }, 50);
     });
   })();
 })();

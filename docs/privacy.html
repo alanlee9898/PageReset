@@ -5,16 +5,52 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>PageReset Privacy Policy</title>
   <style>
-    :root { color-scheme: light dark; }
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-      max-width: 640px;
-      margin: 40px auto;
-      padding: 0 20px;
-      line-height: 1.55;
+    :root {
+      color-scheme: light dark;
+      --bg: #f2f2f7;
+      --fg: #1c1c1e;
+      --muted: #6c6c70;
+      --accent: #007aff;
+      --border: rgba(60, 60, 67, 0.18);
+      --surface: #ffffff;
     }
-    h1 { letter-spacing: -0.02em; }
-    .muted { opacity: 0.7; font-size: 0.9em; }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #1c1c1e;
+        --fg: #f5f5f7;
+        --muted: #98989d;
+        --accent: #0a84ff;
+        --border: rgba(84, 84, 88, 0.65);
+        --surface: #2c2c2e;
+      }
+    }
+    body {
+      font: 15px/1.55 -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", sans-serif;
+      max-width: 640px;
+      margin: 48px auto;
+      padding: 0 20px 64px;
+      background: var(--bg);
+      color: var(--fg);
+    }
+    h1 {
+      margin: 0 0 8px;
+      font-size: 26px;
+      font-weight: 650;
+      letter-spacing: -0.02em;
+    }
+    h2 {
+      margin: 28px 0 8px;
+      font-size: 15px;
+      font-weight: 600;
+    }
+    .muted { color: var(--muted); font-size: 0.9em; }
+    a { color: var(--accent); }
+    a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+    hr {
+      border: none;
+      border-top: 1px solid var(--border);
+      margin: 28px 0;
+    }
   </style>
 </head>
 <body>
@@ -30,7 +66,7 @@
   <p>All features run on your Mac inside Safari. Page content is processed locally to restore selection, hide overlays, and format clipboard text. Nothing is uploaded to our servers — we do not operate a backend for this product.</p>
 
   <h2>Settings storage</h2>
-  <p>Per-site and global preferences (for example, whether to restore selection on a host) are stored locally using Safari’s extension storage on your device. That data does not leave your Mac through PageReset.</p>
+  <p>Per-site and global preferences are stored locally using Safari’s extension storage on your device. That data does not leave your Mac through PageReset.</p>
 
   <h2>Accounts &amp; tracking</h2>
   <p>PageReset does not require an account, does not include third-party trackers, and does not use advertising identifiers.</p>
@@ -44,7 +80,7 @@
   <h2>Changes</h2>
   <p>If this policy changes, we will update the date above. Continued use of PageReset after changes means you accept the updated policy.</p>
 
-  <h2>Contact</h2>
-  <p>Questions: <a href="mailto:pagereset@alanlee.dev">pagereset@alanlee.dev</a></p>
+  <hr />
+  <p>Contact: <a href="mailto:pagereset@alanlee.dev">pagereset@alanlee.dev</a></p>
 </body>
 </html>

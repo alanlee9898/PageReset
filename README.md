@@ -18,7 +18,7 @@ PageReset/
   PageReset/                   # Host app (onboarding)
   PageReset Extension/         # Safari Web Extension resources
 AppStore/                      # Listing + ship checklist
-docs/                          # Privacy policy + test page
+docs/                          # Privacy, support, test page
 ```
 
 ## Build & run
@@ -52,9 +52,12 @@ cd docs && python3 -m http.server 8765
 - App: `com.alanlee.pagereset`
 - Extension: `com.alanlee.pagereset.Extension`
 
-## Privacy
+## Privacy & support
 
-See [docs/privacy.html](docs/privacy.html). PageReset does not collect personal data.
+- [docs/privacy.html](docs/privacy.html)
+- [docs/support.html](docs/support.html)
+
+PageReset does not collect personal data.
 
 ## License
 
