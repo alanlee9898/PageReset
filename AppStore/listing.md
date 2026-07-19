@@ -49,10 +49,10 @@ Launch: US$4.99 (one-time)
 Standard: US$7.99 (one-time)
 
 ## Support URL
-https://alanlee.github.io/pagereset/support.html
+https://alanlee9898.github.io/PageReset/support.html
 
 ## Privacy Policy URL
-https://alanlee.github.io/pagereset/privacy.html
+https://alanlee9898.github.io/PageReset/privacy.html
 
 ## Age rating
 4+

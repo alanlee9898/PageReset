@@ -3,8 +3,10 @@
 ## Pre-submit
 - [ ] Apple Developer Program membership active ($99/yr)
 - [ ] Bundle ID `com.alanlee.pagereset` registered
-- [ ] Privacy policy published (GitHub Pages → `docs/privacy.html`)
-- [ ] Support page published (GitHub Pages → `docs/support.html`)
+- [x] Privacy policy published (GitHub Pages → `docs/privacy.html`)
+- [x] Support page published (GitHub Pages → `docs/support.html`)
+- [x] Development Team set (`52DU553ND4`)
+- [x] Release archive created locally (`build/PageReset.xcarchive`)
 - [ ] Support email monitored (`pagereset@alanlee.dev` or update listing)
 - [ ] App icons verified at all sizes
 - [ ] Extension enables in Safari Settings on a clean Mac user account
