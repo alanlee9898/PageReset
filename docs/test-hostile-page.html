@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>PageReset Hostile Page Test</title>
+  <style>
+    body { font-family: Georgia, serif; margin: 0; padding: 40px; }
+    .article {
+      max-width: 640px;
+      margin: 0 auto;
+      -webkit-user-select: none;
+      user-select: none;
+    }
+    .banner {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,.55);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 99999;
+    }
+    .modal {
+      background: white;
+      padding: 32px;
+      border-radius: 12px;
+      width: min(400px, 90vw);
+      text-align: center;
+    }
+    table { border-collapse: collapse; width: 100%; margin-top: 24px; }
+    td, th { border: 1px solid #ccc; padding: 8px; }
+  </style>
+</head>
+<body oncontextmenu="return false;" onselectstart="return false;" oncopy="return false;">
+  <div class="banner" id="overlay">
+    <div class="modal">
+      <h2>Subscribe to continue</h2>
+      <p>This is a newsletter overlay for testing PageReset overlay removal. Not a paywall.</p>
+      <button type="button">No thanks</button>
+    </div>
+  </div>
+
+  <div class="article">
+    <h1>Sample article with blocked selection</h1>
+    <p>Try selecting this paragraph before enabling PageReset. Sites often set <code>user-select: none</code> and cancel <code>copy</code> / <code>contextmenu</code>.</p>
+    <p>After PageReset: selection, right-click, and plain / Markdown copy should work. <a href="https://example.com">Example link</a>.</p>
+    <table>
+      <thead><tr><th>Name</th><th>Qty</th><th>Price</th></tr></thead>
+      <tbody>
+        <tr><td>Widget</td><td>2</td><td>$4.99</td></tr>
+        <tr><td>Gadget</td><td>1</td><td>$7.99</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <script>
+    document.body.style.overflow = "hidden";
+  </script>
+</body>
+</html>

@@ -1,0 +1,127 @@
+* {
+    -webkit-user-select: none;
+    -webkit-user-drag: none;
+    cursor: default;
+}
+
+:root {
+    color-scheme: light dark;
+    --spacing: 20px;
+    --accent: #c45c26;
+    --muted: #5c5c5c;
+    --bg: #f4f1ea;
+    --fg: #1a1a1a;
+    --card: #ebe6dc;
+}
+
+@media (prefers-color-scheme: dark) {
+    :root {
+        --bg: #1c1b19;
+        --fg: #f2efe8;
+        --muted: #a8a29a;
+        --accent: #e07a3d;
+        --card: #2a2824;
+    }
+}
+
+html {
+    height: 100%;
+}
+
+body {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    gap: 12px;
+    margin: 0 calc(var(--spacing) * 2);
+    min-height: 100%;
+    padding: 32px 0;
+    font: -apple-system-short-body;
+    text-align: center;
+    background: var(--bg);
+    color: var(--fg);
+}
+
+h1 {
+    margin: 0;
+    font-size: 28px;
+    letter-spacing: -0.02em;
+}
+
+.tagline {
+    margin: 0;
+    color: var(--accent);
+    font-size: 15px;
+}
+
+body:not(.state-on, .state-off) :is(.state-on, .state-off) {
+    display: none;
+}
+
+body.state-on :is(.state-off, .state-unknown) {
+    display: none;
+}
+
+body.state-off :is(.state-on, .state-unknown) {
+    display: none;
+}
+
+.state-unknown,
+.state-on,
+.state-off {
+    max-width: 420px;
+    margin: 4px 0 0;
+    color: var(--muted);
+    line-height: 1.45;
+}
+
+.features {
+    list-style: none;
+    margin: 8px 0 4px;
+    padding: 14px 18px;
+    text-align: left;
+    background: var(--card);
+    border-radius: 12px;
+    max-width: 420px;
+}
+
+.features li {
+    margin: 6px 0;
+    font-size: 13px;
+}
+
+.features li::before {
+    content: "✓ ";
+    color: var(--accent);
+    font-weight: 700;
+}
+
+button {
+    font-size: 1em;
+    margin-top: 8px;
+    padding: 10px 16px;
+    border-radius: 10px;
+    border: none;
+    background: var(--fg);
+    color: var(--bg);
+    cursor: pointer;
+}
+
+button:hover {
+    opacity: 0.92;
+}
+
+.footer {
+    margin-top: 8px;
+    font-size: 11px;
+    color: var(--muted);
+    line-height: 1.5;
+    max-width: 420px;
+}
+
+.footer a {
+    color: var(--accent);
+    cursor: pointer;
+    -webkit-user-select: text;
+}

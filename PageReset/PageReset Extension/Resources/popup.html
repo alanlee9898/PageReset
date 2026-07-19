@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>PageReset</title>
+  <link rel="stylesheet" href="popup.css" />
+</head>
+<body>
+  <header class="header">
+    <div class="brand">
+      <strong>PageReset</strong>
+      <span class="tagline">Make any webpage usable again</span>
+    </div>
+    <p id="host" class="host">—</p>
+  </header>
+
+  <section class="actions">
+    <button type="button" data-action="remove-overlays">Remove overlays</button>
+    <button type="button" data-action="copy-plain">Copy plain text</button>
+    <button type="button" data-action="copy-markdown">Copy as Markdown</button>
+    <button type="button" data-action="extract-csv">Tables → CSV</button>
+    <button type="button" data-action="copy-links">Copy all links</button>
+    <button type="button" data-action="toggle-zap" class="secondary">Zap element…</button>
+  </section>
+
+  <section class="rules">
+    <h2>This site</h2>
+    <label class="row">
+      <span>Restore text selection</span>
+      <input type="checkbox" id="restoreSelection" data-rule="restoreSelection" />
+    </label>
+    <label class="row">
+      <span>Restore right-click</span>
+      <input type="checkbox" id="restoreRightClick" data-rule="restoreRightClick" />
+    </label>
+    <label class="row">
+      <span>Remove overlays on load</span>
+      <input type="checkbox" id="removeOverlaysOnLoad" data-rule="removeOverlaysOnLoad" />
+    </label>
+    <label class="row">
+      <span>Always copy as plain text</span>
+      <input type="checkbox" id="copyPlainOnCopy" data-rule="copyPlainOnCopy" />
+    </label>
+    <div class="rule-scope">
+      <label><input type="radio" name="scope" value="site" checked /> This site only</label>
+      <label><input type="radio" name="scope" value="global" /> Global default</label>
+    </div>
+    <button type="button" id="clearSite" class="linkish">Clear site overrides</button>
+  </section>
+
+  <section class="sites" id="sitesSection">
+    <h2>Saved site rules</h2>
+    <ul id="siteList"></ul>
+  </section>
+
+  <p id="status" class="status" role="status"></p>
+
+  <script src="lib/rules.js"></script>
+  <script src="popup.js"></script>
+</body>
+</html>

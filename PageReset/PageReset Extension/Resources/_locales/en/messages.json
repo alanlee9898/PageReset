@@ -1,0 +1,10 @@
+{
+  "extension_name": {
+    "message": "PageReset",
+    "description": "The display name for the extension."
+  },
+  "extension_description": {
+    "message": "Make any webpage usable again. Restore selection, remove overlays, and copy cleanly.",
+    "description": "Description of what the extension does."
+  }
+}
